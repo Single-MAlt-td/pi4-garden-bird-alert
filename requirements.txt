@@ -1,0 +1,4 @@
+./libs/camera_core
+./libs/vision_core
+./libs/notify_core
+./apps/bird_guard
