@@ -1,9 +1,9 @@
 from pathlib import Path
 
 from bird_guard.config import ConfigHandler, AppConfig
-from notify_core.ntfy_client import NtfyHandler
-from camera_core.camera import DummyCamera
-from vision_core.vision import MotionDetector
+from bird_guard.notify.ntfy_client import NtfyHandler
+from bird_guard.camera.camera import DummyCamera
+from bird_guard.vision.vision import MotionDetector
 
 APP_BASE_PATH = Path(__file__).resolve().parents[2]
 
@@ -12,12 +12,13 @@ APP_BASE_PATH = Path(__file__).resolve().parents[2]
 def main():
     print("bird app started")
     config_handler = ConfigHandler(APP_BASE_PATH / "config" / "config.toml")
-    print(config_handler.get_config())
+    settings = config_handler.get_config()
+    print(settings)
 
-    ntfy_handler = NtfyHandler(config_handler.get_config().ntfy)
+    ntfy_handler = NtfyHandler(settings.ntfy)
     ntfy_handler.send_message("Test", True)
 
-    cam = DummyCamera()
+    cam = DummyCamera(settings.camera)
     detector = MotionDetector()
 
     for i in range(10):

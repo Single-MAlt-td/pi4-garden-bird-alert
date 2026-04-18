@@ -5,8 +5,8 @@ import toml
 from dataclasses import dataclass, field, asdict
 from typing import Any
 
-from notify_core.config import AppConfig_Ntfy
-from camera_core.config import AppConfig_Camera
+from bird_guard.notify.config import AppConfig_Ntfy
+from bird_guard.camera.config import AppConfig_Camera
 
 # ===========
 # CONFIG FILE
@@ -47,6 +47,7 @@ class ConfigHandler:
     def _check_and_create_default_config_file(self, config_file: Path) -> bool:
         if not config_file.exists() or config_file.stat().st_size == 0:
             try:
+                config_file.parent.mkdir(parents=True, exist_ok=True)
                 self._save_app_config(AppConfig(), config_file)
                 print(f"Created config file: {config_file}")
             except Exception as e:

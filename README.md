@@ -4,11 +4,11 @@
 
 For users:
 
-```pip install -r requirements.txt```
+```pip install .```
 
 For development:
 
-```pip install -r requirements-dev.txt```
+```pip install -e .```
 
 ## Cam lib
 

@@ -4,9 +4,9 @@ import cv2
 
 from abc import ABC, abstractmethod
 
-from camera_core.config import AppConfig_Camera
+from bird_guard.camera.config import AppConfig_Camera
 
-CAM_CORE_BASE_PATH = Path(__file__).resolve().parents[2]
+CAM_MODULE_BASE_PATH = Path(__file__).resolve().parents[0]
 
 # =================
 # CAMERA SUPERCLASS (abstract)
@@ -80,12 +80,15 @@ class DummyCamera(Camera):
     def _load_dummy_images(self):
         self.dummy_images = []
         self.counter = 0
-        image_folder = CAM_CORE_BASE_PATH / "data/dummy_images"
+        image_folder = CAM_MODULE_BASE_PATH.parents[2] / "data/dummy_images"
         jpeg_files = list(image_folder.glob("*.jpeg"))
         for image_filename in jpeg_files:
             image = cv2.imread(image_filename, cv2.IMREAD_COLOR)
             self.dummy_images.append(image)
-        print(f"Loaded {len(self.dummy_images)} dummy images")
+        if len(self.dummy_images) > 0:
+            print(f"Loaded {len(self.dummy_images)} dummy images")
+        else:
+            raise FileNotFoundError("Failed to load the dummy images!")
 
     def get_frame(self, source: str = "") -> np.array:
         idx_return = self.counter

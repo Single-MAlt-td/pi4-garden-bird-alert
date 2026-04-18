@@ -2,7 +2,7 @@ import time
 import cv2
 from numpy.ma.extras import average
 
-from camera_core.camera import PiCam2Camera, AppConfig_Camera
+from bird_guard.camera.camera import PiCam2Camera, AppConfig_Camera
 
 t_start = None
 def tic():
