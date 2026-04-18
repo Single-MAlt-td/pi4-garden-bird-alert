@@ -1,0 +1,8 @@
+[ntfy]
+url = "https://ntfy.sh"
+topic = "NTFY_TOPIC_URL"
+
+[camera]
+width = 1920
+height = 1080
+ISO = 100
