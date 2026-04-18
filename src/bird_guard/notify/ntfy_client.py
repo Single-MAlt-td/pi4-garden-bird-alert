@@ -2,7 +2,7 @@ import requests
 import os
 import warnings
 
-from bird_guard.notify.config import AppConfig_Ntfy
+from bird_guard.notify.notify_config import AppConfig_Ntfy
 
 class NtfyHandler:
     def __init__(self, config: AppConfig_Ntfy):

@@ -1,6 +1,8 @@
 import numpy as np
 import cv2
 
+from bird_guard.camera.camera import Frame
+
 class MotionDetector:
     def __init__(self, threshold: int = 400):
         self.prev_frame = None
@@ -20,12 +22,22 @@ class MotionDetector:
         if self.debug:
             cv2.destroyWindow("Debug")
 
-    def detect(self, frame) -> bool:
-        # convert to gray image
-        gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+    def detect(self, frame: Frame) -> bool:
+        # convert to gray image (if needed) and set kernel size
+        match frame.type:
+            case Frame.FrameType.COLOR:
+                gray = cv2.cvtColor(frame.data, cv2.COLOR_BGR2GRAY)
+                kernel_size = 21
+            case Frame.FrameType.GRAY:
+                gray = frame.data
+                kernel_size = 21
+            case Frame.FrameType.LORES:
+                gray = frame.data[:frame.dim_y, :]
+                kernel_size = 5
+            case _:
+                raise NotImplementedError("Frame type not yet implemented.")
 
         # blur image to reduce noise
-        kernel_size = 21
         gray = cv2.GaussianBlur(gray, (kernel_size, kernel_size), 0)
 
         # store previous image (if not already set)
@@ -55,14 +67,14 @@ class MotionDetector:
             #contour_areas = [cv2.contourArea(contour) for contour in contours]
             big_contours = [contour for contour in contours if cv2.contourArea(contour) > 500]
 
-            debug_img = cv2.cvtColor(thresh, cv2.COLOR_GRAY2BGR)
+            debug_img = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
             cv2.drawContours(debug_img, contours, -1, (0, 0, 255), 2)
             cv2.drawContours(debug_img, big_contours, -1, (0, 255, 0), 2)
             for contour in big_contours:
                 x, y, w, h = cv2.boundingRect(contour)
                 cv2.rectangle(debug_img, (x, y), (x + w, y + h), (0, 255, 255), 2)
 
-            combined = np.vstack([np.hstack([self.prev_frame, frame]),
+            combined = np.vstack([#np.hstack([self.prev_frame, frame]),
                                   np.hstack([cv2.cvtColor(self.prev_gray, cv2.COLOR_GRAY2BGR), cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)]),
                                   np.hstack([cv2.cvtColor(diff, cv2.COLOR_GRAY2BGR), debug_img])])
             cv2.imshow("Debug", cv2.resize(combined, (1920, 1080)))

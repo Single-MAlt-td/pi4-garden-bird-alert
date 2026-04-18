@@ -3,6 +3,8 @@ url = "https://ntfy.sh"
 topic = "NTFY_TOPIC_URL"
 
 [camera]
-width = 1920
-height = 1080
+color_image_size = [1920, 1080]
+color_image_format = "RGB888"
+lores_image_size = [640, 360]
+lores_image_format = "YUV420"
 ISO = 100

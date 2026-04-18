@@ -2,7 +2,7 @@ import time
 import cv2
 from numpy.ma.extras import average
 
-from bird_guard.camera.camera import PiCam2Camera, AppConfig_Camera
+from bird_guard.camera.camera import PiCam2Camera, AppConfig_Camera, Frame
 
 t_start = None
 def tic():
@@ -16,12 +16,12 @@ def toc():
     else:
         raise ValueError("use tic before toc!")
 
-def benchmark(cam, source: str):
-    print(f"Starting benchmark for '{source}' ...")
+def benchmark(cam, frame_type: Frame.FrameType):
+    print(f"Starting benchmark for '{frame_type}' ...")
     times = []
     for i in range(10):
         tic()
-        frame = cam.get_frame(source)
+        frame = cam.get_frame(frame_type)
         times.append(toc())
     print(f"Average frame duration: {average(times):.3f}")
     print(f"Min/Max frame duration: [{min(times):.3f}, {max(times):.3f}]")
@@ -38,10 +38,11 @@ def main():
     tic()
     frame = cam.get_frame()
     print(f"First frame duration: {toc():.3f} seconds")
-    print(f"First frame shape: {frame.shape}")
+    print(f"First frame shape: {frame.data.shape}")
 
-    last_main_frame = benchmark(cam, "main")
-    last_lores_frame = benchmark(cam, "lores")
+    last_main_frame = benchmark(cam, Frame.FrameType.COLOR)
+    last_lores_frame = benchmark(cam, Frame.FrameType.LORES)
+
 
 if __name__ == "__main__":
     main()

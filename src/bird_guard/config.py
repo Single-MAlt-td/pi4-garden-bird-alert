@@ -5,19 +5,19 @@ import toml
 from dataclasses import dataclass, field, asdict
 from typing import Any
 
-from bird_guard.notify.config import AppConfig_Ntfy
-from bird_guard.camera.config import AppConfig_Camera
+from bird_guard.notify.notify_config import AppConfig_Ntfy
+from bird_guard.camera.camera_config import AppConfig_Camera
 
-# ===========
-# CONFIG FILE
-# ===========
-
-
+# ======
+# CONFIG
+# ======
 @dataclass()
-class AppConfig():
+class AppConfig:
+    # define fields/structs of the config
     ntfy: AppConfig_Ntfy = field(default_factory=AppConfig_Ntfy)
     camera: AppConfig_Camera = field(default_factory=AppConfig_Camera)
 
+    # implement reader
     @classmethod
     def from_dict(cls, config_file_data: dict[str, Any]) -> "AppConfig":
         return cls(
