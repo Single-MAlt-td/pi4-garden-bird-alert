@@ -45,8 +45,8 @@ def main():
     # init motion detector
     detector = MotionDetector()
 
-    # test process 10 frames
-    for i in range(10):
+    # test process frames
+    while True:
         print("get frame ...")
         frame = cam.get_frame(Frame.FrameType.LORES)
         print("detect ...")

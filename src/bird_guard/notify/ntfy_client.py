@@ -10,16 +10,15 @@ class NtfyHandler:
         self.full_url = self._get_full_ntfy_url()
 
     def _get_topic(self) -> str or None:
-        topic_or_env_var = self.config.topic
-        topic = os.getenv(topic_or_env_var)
-        if topic is None and topic_or_env_var == AppConfig_Ntfy.topic:
-            warnings.warn(f"NTFY topic is not set in config.toml and environment variable {topic_or_env_var} is not found! NTFY functionality is thereby disabled!")
+        topic = os.getenv(self.config.topic)
+        if topic is None:
+            warnings.warn(f"NTFY topic environment variable {self.config.topic} is not found! NTFY functionality is thereby disabled!")
             return None
         return topic
 
     def _get_full_ntfy_url(self) -> str or None:
         topic = self._get_topic()
-        if topic is not None:
+        if topic:
             return f"{self.config.url.rstrip('/')}/{topic.lstrip('/')}"
         else:
             return None

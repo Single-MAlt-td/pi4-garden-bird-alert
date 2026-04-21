@@ -1,5 +1,6 @@
 .venv/
 .idea/
 dev_notes/
+data/dummy_images/**/*.jpg
 *.egg-info/
 __pycache__/

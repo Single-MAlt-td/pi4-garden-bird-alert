@@ -1,25 +1,36 @@
+"""
+Benchmark script to check how fast high-res and lo-res images can be obtained from Picamera2
+(requires a Raspberry Pi system with connected camera or some similar setup)
+"""
+
 import time
-import cv2
+import math
 from numpy.ma.extras import average
 
 from bird_guard.camera.camera import PiCam2Camera, AppConfig_Camera, Frame
 
-t_start = None
+num_frame_requests = 30   # number of frames queried for speed testing
+
+# ---------------
+
+t_start = math.inf  # global variable for tic and toc
+
 def tic():
     global t_start
     t_start = time.time()
 
 def toc():
     global t_start
-    if t_start is not None:
+    if math.isinf(t_start):
         return time.time() - t_start
     else:
         raise ValueError("use tic before toc!")
 
-def benchmark(cam, frame_type: Frame.FrameType):
+def benchmark(cam, frame_type: Frame.FrameType) -> Frame:
     print(f"Starting benchmark for '{frame_type}' ...")
     times = []
-    for i in range(10):
+    frame = Frame()
+    for i in range(num_frame_requests):
         tic()
         frame = cam.get_frame(frame_type)
         times.append(toc())

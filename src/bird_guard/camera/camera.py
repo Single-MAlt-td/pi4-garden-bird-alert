@@ -14,24 +14,32 @@ CAM_MODULE_BASE_PATH = Path(__file__).resolve().parents[0]
 # CAMERA FRAME
 # ============
 class Frame:
+    """
+    Hold a camera frame image as np.array and metadata.
+    """
     class FrameType(Enum):
-        UNSET = 0
-        LORES = 1
-        GRAY = 2
-        COLOR = 3
+        """
+        Implemented image types.
+        """
+        UNSET = 0   # undefined type (default)
+        LORES = 1   # low-res YUV420 image
+        GRAY = 2    # high-res gray image (currently not used)
+        COLOR = 3   # high-res BGR image
+        # TODO: Remove image types from config, only leave the resolution configurable
 
     def __init__(self,
                  frame: np.array = None,
                  frame_type: FrameType = FrameType.UNSET,
                  dimensions_xy: Tuple[int, int] = (None, None)
                  ):
-        self.data: np.array = frame
-        self.type: Frame.FrameType = frame_type
-        self.dim_x, self.dim_y = dimensions_xy
+        self.data: np.array = frame                 # actual image array
+        self.type: Frame.FrameType = frame_type     # internal image type
+        self.dim_x, self.dim_y = dimensions_xy      # actual main image dimensions (np.array may hold additional data (e.g. YUV420))
 
-        self.height: int or None = None
-        self.width: int or None = None
+        self.height: int or None = None     # height of the image data stored in the np.array
+        self.width: int or None = None      # width of the image data stored in the np.array
 
+        # get height and with of the image data stored in the np.array
         if frame is not None:
             self.height, self.width, *_ = frame.data.shape
 
@@ -114,11 +122,20 @@ class DummyCamera(Camera):
     def _load_dummy_images(self):
         self.dummy_images = []
         self.counter = 0
-        image_folder = CAM_MODULE_BASE_PATH.parents[2] / "data/dummy_images"
-        jpeg_files = list(image_folder.glob("*.jpeg"))
+
+        # get images in frame folder
+        # TODO: image folder is currently hard-coded! -> add to settings
+        image_folder = CAM_MODULE_BASE_PATH.parents[2] / "data/dummy_images/ducks_5fps"
+        jpeg_files = list(image_folder.glob("*.jp*g"))
+
+        # test: prepend corresponding background image (TODO: remove or implement)
+        #jpeg_files.insert(0, image_folder.parent / "ducks_5fps_background_MOG2.jpg")
+
+        print(f"Loading dummy images from {image_folder} ...")
         for image_filename in jpeg_files:
             image = cv2.imread(image_filename, cv2.IMREAD_COLOR)
-            self.dummy_images.append(image)
+            self.dummy_images.append(cv2.resize(image, self.settings.color_image_size))
+
         if len(self.dummy_images) > 0:
             print(f"Loaded {len(self.dummy_images)} dummy images")
         else:
@@ -127,10 +144,15 @@ class DummyCamera(Camera):
     def get_frame(self, frame_type: Frame.FrameType = Frame.FrameType.COLOR) -> Frame:
         idx_return = self.counter
         self.counter = (self.counter + 1) % len(self.dummy_images)
+
         if frame_type == Frame.FrameType.COLOR:
+
             return Frame(self.dummy_images[idx_return], frame_type, self.settings.color_image_size)
+
         elif frame_type == Frame.FrameType.LORES:
+
             lores_img = cv2.resize(self.dummy_images[idx_return], self.settings.lores_image_size)
             return Frame(cv2.cvtColor(lores_img, cv2.COLOR_BGR2YUV_I420), frame_type, self.settings.lores_image_size)
+
         else:
             raise NotImplementedError("Frame type not yet implemented.")
