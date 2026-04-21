@@ -1,11 +1,5 @@
 # Bird Guard
 
-## Installation
+⚠️ This project is currently under development! ⚠️
 
-For users:
-
-```pip install -r requirements.txt```
-
-For development:
-
-```pip install -r requirements-dev.txt```
+Switch to the `develop` branch to see the current progress
