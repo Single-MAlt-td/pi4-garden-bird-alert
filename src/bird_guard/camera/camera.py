@@ -91,7 +91,7 @@ class PiCam2Camera(Camera):
             buffer_count=4
         )
         self.cam.configure(config)
-        self.cam.set_controls({"AnalogueGain": self.settings.ISO / 100.0})
+        self.cam.set_controls({"AnalogueGain": self.settings.picamera2.ISO / 100.0})
         self.cam.start()
 
     def get_frame(self, frame_type: Frame.FrameType = Frame.FrameType.COLOR) -> Frame:

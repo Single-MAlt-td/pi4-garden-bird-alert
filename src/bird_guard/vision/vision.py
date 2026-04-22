@@ -95,7 +95,7 @@ class DebugViewer:
 
         combined = np.vstack([np.hstack([image for image in im_cols ]) for im_cols in im_matrix_rows])
 
-        cv2.imshow(self.window_name, cv2.resize(combined, (1920, 1080)))
+        cv2.imshow(self.window_name, cv2.resize(combined, (1920, 1080)))    # TODO: set window size by config
 
 
 
@@ -215,6 +215,7 @@ class MotionDetector:
                 x, y, w, h = cv2.boundingRect(contour)
                 cv2.rectangle(debug_img, (x, y), (x + w, y + h), (0, 255, 255), 2)
 
+            # TODO: remove im1 or use it
             if self.mode == MotionDetector.DetectionMode.IM_DIFF:
                 im1 = self.prev_gray
             elif self.mode == MotionDetector.DetectionMode.BG_REM:
@@ -224,7 +225,9 @@ class MotionDetector:
 
             if self.debug_view: self.debug_view.set_image("inspect", debug_img)
 
-            # TODO: store images in a debug struct and implement a debug view
+            # update images in the debug view and stop until a key press is received
+            # TODO: make waitkey configurable
+            # TODO: implement FPS for no waitkey
             if self.debug_view:
                 self.debug_view.update_debug_view()
 
