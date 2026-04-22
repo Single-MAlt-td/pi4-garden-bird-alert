@@ -6,7 +6,7 @@ from abc import ABC, abstractmethod
 from enum import Enum
 from typing import Tuple
 
-from bird_guard.camera.camera_config import AppConfig_Camera
+from bird_guard.camera.camera_config import ModuleConfig_Camera
 
 CAM_MODULE_BASE_PATH = Path(__file__).resolve().parents[0]
 
@@ -25,7 +25,6 @@ class Frame:
         LORES = 1   # low-res YUV420 image
         GRAY = 2    # high-res gray image (currently not used)
         COLOR = 3   # high-res BGR image
-        # TODO: Remove image types from config, only leave the resolution configurable
 
     def __init__(self,
                  frame: np.array = None,
@@ -48,7 +47,7 @@ class Frame:
 # CAMERA SUPERCLASS (abstract)
 # =================
 class Camera(ABC):
-    def __init__(self, settings: AppConfig_Camera):
+    def __init__(self, settings: ModuleConfig_Camera):
         self.settings = settings
 
     @abstractmethod
@@ -67,11 +66,12 @@ class Camera(ABC):
     def show_frame(frame: Frame):
         cv2.imshow("View Frame", frame.data)
 
+
 # ================
 # PICAMERA2 CAMERA
 # ================
 class PiCam2Camera(Camera):
-    def __init__(self, settings: AppConfig_Camera):
+    def __init__(self, settings: ModuleConfig_Camera):
         super().__init__(settings)
 
         self.cam = None
@@ -86,8 +86,8 @@ class PiCam2Camera(Camera):
 
         self.cam = Picamera2()
         config = self.cam.create_video_configuration(
-            main={"size": self.settings.color_image_size, "format": self.settings.color_image_format},
-            lores={"size": self.settings.lores_image_size, "format": self.settings.lores_image_format},
+            main={"size": self.settings.color_image_size, "format": "RGB888"},
+            lores={"size": self.settings.lores_image_size, "format": "YUV420"},
             buffer_count=4
         )
         self.cam.configure(config)
@@ -104,11 +104,12 @@ class PiCam2Camera(Camera):
                 case _:
                     raise NotImplementedError("Frame type not yet implemented.")
 
+
 # ============
 # DUMMY CAMERA
 # ============
 class DummyCamera(Camera):
-    def __init__(self, settings: AppConfig_Camera):
+    def __init__(self, settings: ModuleConfig_Camera):
         super().__init__(settings)
 
         self.dummy_images: list[np.array] = []
@@ -124,8 +125,7 @@ class DummyCamera(Camera):
         self.counter = 0
 
         # get images in frame folder
-        # TODO: image folder is currently hard-coded! -> add to settings
-        image_folder = CAM_MODULE_BASE_PATH.parents[2] / "data/dummy_images/ducks_5fps"
+        image_folder = CAM_MODULE_BASE_PATH.parents[2] / "data/dummy_images" / self.settings.dummy_camera.images_subfolder
         jpeg_files = list(image_folder.glob("*.jp*g"))
 
         # test: prepend corresponding background image (TODO: remove or implement)

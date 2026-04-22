@@ -7,7 +7,7 @@ import time
 import math
 from numpy.ma.extras import average
 
-from bird_guard.camera.camera import PiCam2Camera, AppConfig_Camera, Frame
+from bird_guard.camera.camera import PiCam2Camera, ModuleConfig_Camera, Frame
 
 num_frame_requests = 30   # number of frames queried for speed testing
 
@@ -40,7 +40,7 @@ def benchmark(cam, frame_type: Frame.FrameType) -> Frame:
     return frame
 
 def main():
-    settings = AppConfig_Camera()
+    settings = ModuleConfig_Camera()
 
     tic()
     cam = PiCam2Camera(settings)

@@ -2,10 +2,10 @@ import requests
 import os
 import warnings
 
-from bird_guard.notify.notify_config import AppConfig_Ntfy
+from bird_guard.notify.notify_config import ModuleConfig_Ntfy
 
 class NtfyHandler:
-    def __init__(self, config: AppConfig_Ntfy):
+    def __init__(self, config: ModuleConfig_Ntfy):
         self.config = config
         self.full_url = self._get_full_ntfy_url()
 

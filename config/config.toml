@@ -3,8 +3,11 @@ url = "https://ntfy.sh"
 topic = "NTFY_TOPIC_URL"
 
 [camera]
-color_image_size = [1920, 1080]
-color_image_format = "RGB888"
-lores_image_size = [640, 360]
-lores_image_format = "YUV420"
+color_image_size = [ 1920, 1080,]
+lores_image_size = [ 640, 360,]
+
+[camera.picamera2]
 ISO = 100
+
+[camera.dummy_camera]
+images_subfolder = "ducks_5fps"

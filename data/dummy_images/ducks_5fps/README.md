@@ -1,7 +1,8 @@
-# Dummy images for dummy camera
+# Dummy images for the dummy camera
 
-The directory `data/dummy_images/duck_5fps` must contain test images for the dummy camera.
-Because of the file sizes these images are not included, but can be generated easily:
+The dummy camera is a simulation of a real camera used for development on non-raspi systems.
+The directory `data/dummy_images/duck_5fps` must contain frame images for the dummy camera.
+Because of the file sizes these images are not included in this repository, but can be generated easily:
 
 ## Download test video
 
