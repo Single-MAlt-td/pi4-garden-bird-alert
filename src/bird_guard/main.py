@@ -1,31 +1,19 @@
-import platform
 from pathlib import Path
-from enum import Enum
 
-from bird_guard.config import ConfigHandler, AppConfig
+from bird_guard.utils import PlatformInfo
+from bird_guard.config import ConfigHandler
 from bird_guard.notify.ntfy_client import NtfyHandler
 from bird_guard.camera.camera import DummyCamera, PiCam2Camera, Frame
 from bird_guard.vision.vision import MotionDetector
 
+
+# get the root path of the repo
 APP_BASE_PATH = Path(__file__).resolve().parents[2]
 
-class OperatingSystem(Enum):
-    UNSUPPORTED = 0
-    WINDOWS = 1
-    LINUX = 2
-    PROBABLY_RASPI = 3
 
-def get_platform() -> OperatingSystem:
-    if platform.system() == "Windows":
-        return OperatingSystem.WINDOWS
-    elif platform.system() == "Linux":
-        if "arm" in platform.machine().lower() or "aarch" in platform.machine().lower():
-            return OperatingSystem.PROBABLY_RASPI
-        else:
-            return OperatingSystem.LINUX
-    else:
-        return OperatingSystem.UNSUPPORTED
-
+# ====
+# Main
+# ====
 def main():
     print("bird app started")
 
@@ -42,21 +30,24 @@ def main():
     ntfy_handler.send_message("Test", True)
 
     # auto-select camera depending on detected system
-    match get_platform():
-        case OperatingSystem.PROBABLY_RASPI:
-            cam = PiCam2Camera(settings.camera)
-        case OperatingSystem.WINDOWS | OperatingSystem.LINUX:
-            cam = DummyCamera(settings.camera)
+    match PlatformInfo.get_platform():
+        case PlatformInfo.OperatingSystem.PROBABLY_RASPI:
+            print("Detected OS is likely Raspi -> Using Picamera2!")
+            camera = PiCam2Camera(settings.camera)
+        case PlatformInfo.OperatingSystem.WINDOWS | PlatformInfo.OperatingSystem.LINUX:
+            print("Detected OS is non-Raspi -> Using dummy camera!")
+            camera = DummyCamera(settings.camera)
         case _:
-            raise NotImplementedError(f"Platform {platform.system()} is not supported.")
+            raise NotImplementedError(f"Platform {PlatformInfo.get_platform_name()} is not supported.")
 
     # init motion detector
     motion_detector = MotionDetector(enable_debug=True)
 
     # test process frames
+    print("HINT: Press any key to switch to the next image. Press Q to quit.")
     while True:
         # get frame
-        frame = cam.get_frame(Frame.FrameType.LORES)
+        frame = camera.get_frame(Frame.FrameType.LORES)
 
         # detect
         if motion_detector.process(frame):

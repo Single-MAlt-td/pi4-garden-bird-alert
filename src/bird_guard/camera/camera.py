@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Tuple
 
 from bird_guard.camera.camera_config import ModuleConfig_Camera
+from bird_guard.vision.utils.image_utils import Image
 
 CAM_MODULE_BASE_PATH = Path(__file__).resolve().parents[0]
 
@@ -15,7 +16,7 @@ CAM_MODULE_BASE_PATH = Path(__file__).resolve().parents[0]
 # ============
 class Frame:
     """
-    Hold a camera frame image as np.array and metadata.
+    Hold a camera frame image as Image (np.typing.NDArray[np.uint8]) and metadata.
     """
     class FrameType(Enum):
         """
@@ -27,18 +28,18 @@ class Frame:
         COLOR = 3   # high-res BGR image
 
     def __init__(self,
-                 frame: np.array = None,
+                 frame: Image = None,
                  frame_type: FrameType = FrameType.UNSET,
                  dimensions_xy: Tuple[int, int] = (None, None)
                  ):
-        self.data: np.array = frame                 # actual image array
+        self.data: Image = frame                 # actual image array
         self.type: Frame.FrameType = frame_type     # internal image type
-        self.dim_x, self.dim_y = dimensions_xy      # actual main image dimensions (np.array may hold additional data (e.g. YUV420))
+        self.dim_x, self.dim_y = dimensions_xy      # actual main image dimensions (image array may hold additional data (e.g. YUV420))
 
-        self.height: int or None = None     # height of the image data stored in the np.array
-        self.width: int or None = None      # width of the image data stored in the np.array
+        self.height: int or None = None     # height of the image data stored in the image array
+        self.width: int or None = None      # width of the image data stored in the image array
 
-        # get height and with of the image data stored in the np.array
+        # get height and with of the image data stored in the image array
         if frame is not None:
             self.height, self.width, *_ = frame.data.shape
 
@@ -112,7 +113,7 @@ class DummyCamera(Camera):
     def __init__(self, settings: ModuleConfig_Camera):
         super().__init__(settings)
 
-        self.dummy_images: list[np.array] = []
+        self.dummy_images: list[Image] = []
         self.counter: int = 0
 
         self._initialize_camera()

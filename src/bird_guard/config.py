@@ -1,3 +1,7 @@
+"""
+Config file implementation (App scope).
+"""
+
 from pathlib import Path
 import tomllib
 import toml
@@ -13,7 +17,9 @@ from bird_guard.camera.camera_config import ModuleConfig_Camera
 # ======
 @dataclass()
 class AppConfig:
-    # define fields/structs of the config
+    """
+    Main config file for the entire app + modules
+    """
     ntfy: ModuleConfig_Ntfy = field(default_factory=ModuleConfig_Ntfy)
     camera: ModuleConfig_Camera = field(default_factory=ModuleConfig_Camera)
 
@@ -27,10 +33,13 @@ class AppConfig:
 # ===========
 
 
-# =============
-# CONFIG READER
-# =============
+# ==============
+# CONFIG HANDLER
+# ==============
 class ConfigHandler:
+    """
+    Reader/Writer for toml config files using dataclasses providing a from_dict function
+    """
     def __init__(self, config_file: Path):
         self.config_file: Path = config_file
         self.config: AppConfig
