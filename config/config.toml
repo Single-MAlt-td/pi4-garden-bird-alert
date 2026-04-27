@@ -5,9 +5,18 @@ topic = "NTFY_TOPIC_URL"
 [camera]
 color_image_size = [ 1920, 1080,]
 lores_image_size = [ 640, 360,]
+fps = 5
+
+[vision]
+debug = true
 
 [camera.picamera2]
 ISO = 100
 
 [camera.dummy_camera]
 images_subfolder = "ducks_5fps"
+speed_factor = 1
+
+[vision.motion_detector.activity_map]
+cell_size = [ 10, 10,]
+alpha = 0.02

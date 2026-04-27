@@ -45,9 +45,6 @@ class DebugViewer:
             Args:
                 rows: Number of images per row
                 cols: Number of images per column
-
-            Returns:
-
             """
             self.rows = rows
             self.cols = cols
@@ -127,7 +124,10 @@ class DebugViewer:
                     if image is not None:
                         im_channels = ImageUtils.get_color_channels(image)
                         if im_channels == 1:
-                            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                            if ImageUtils.is_float_image(image):
+                                image = ImageUtils.float_image_to_gray(image)
+                            else:
+                                image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
                         elif im_channels == 3:
                             pass
                         else:

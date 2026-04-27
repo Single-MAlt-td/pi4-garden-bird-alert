@@ -9,16 +9,15 @@ Usage:
   execute the script
 """
 
-from pathlib import Path
-
 import cv2
 import numpy as np
-import glob
 
-ROOT_PATH = Path(__file__).resolve().parents[1]
+from bird_guard.utils import PlatformInfo
+
+DATA_PATH = PlatformInfo.get_data_path("bird_guard")
 
 # Input image dir
-IMAGE_DIR = ROOT_PATH / "data/dummy_images/ducks_5fps/"
+IMAGE_DIR = DATA_PATH / "dummy_images/ducks_5fps/"
 
 # Result images
 output_file_median = IMAGE_DIR.parents[0] / "ducks_5fps_background_median.jpg"

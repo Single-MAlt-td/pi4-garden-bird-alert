@@ -1,15 +1,9 @@
 # Free video sources used for testing
 
-The dummy camera requires an image series for output. For this purpose, any video can be used.
-At the moment, individual frames must be extracted from a video for usage by the dummy camera.
-In the future it might be possible to process videos directly.
+For testing and developing, some video input is required for usage with the dummy camera.
+This file gives credit to all third-party video files, which have been used in this project.
 
-Important properties the videos (or sub-parts of them) must fulfill:
-
-* Stationary camera (stable, no camera movements)
-* Should contain target objects doing 'target things' (e.g. birds pecking seeds)
-
-## Videos used for testing
+## Videos used for testing and development
 
 ### ducks_5fps
 

@@ -11,9 +11,15 @@ The app is built for a *Raspberry Pi 4* system with a *Pi High Quality Camera*, 
 
 - [Installation](#installation)
   - [For Users](#for-users)
+    - [Starting the App](#starting-the-app) 
+    - [User Folders](#user-folders)
   - [For Developers](#for-developers)
     - [Installation using PyCharm](#installation-using-pycharm)
+      - [Starting the App (main.py)](#starting-the-app-mainpy)
     - [Manual installation](#manual-installation)
+      - [Starting the App (manual)](#starting-the-app-manual)
+    - [Dev Folders](#dev-folders)
+- [Config File](#config-file)
 
 ---
 
@@ -44,10 +50,27 @@ python -m venv .venv
 python -m pip install .
 ```
 
-5. Start the app
+### Starting the App
+
+Ensure your venv is activated! Then just execute:
+
 ```
 bird-guard
 ```
+
+
+### User Folders
+
+Note the following user file locations:
+
+* Config folder (contains the app configuration file (`config.toml`)):
+  * Linux: `/home/<user>/.config/bird_guard/config`
+  * Windows: `C:\Users\<user>\AppData\Local\bird_guard\config`
+
+* Data folder (may contain additional data, e.g. video recordings and dummy images): 
+  * Linux: `/home/<user>/.local/share/bird_guard/data`
+  * Windows: `C:\Users\<user>\AppData\Local\bird_guard\data`
+
 
 ## For Developers
 
@@ -74,7 +97,7 @@ Setup PyCharm:
   * If something is odd (which happens sometimes), open a new Terminal or reload the project / restart PyCharm
 * Install dependencies by executing (Terminal): `python -m pip install -e .`
 
-Run the app:
+#### Starting the App (main.py)
 
 * Generate test frame images for the dummy camera (see: [ducks_5fps/README.md](data/dummy_images/ducks_5fps/README.md))
 * It should now be possible to open and run `src/bird_guard/main.py` directly in PyCharm
@@ -89,9 +112,29 @@ Follow steps 1 to 3 for users. Then:
 python -m pip install -e .
 ```
 
-5. Start the app:
+#### Starting the App (manual)
+
+Ensure your venv is activated! Then execute:
+
 ```
 python -m bird_guard.main
 ```
 
+### Dev Folders
+
+Unlike a user installation, all files remain in the cloned repository for developers:
+
+* Config folder (contains the app configuration file (`config.toml`)):
+  * Linux: `<repo_root>/config`
+  * Windows: `<repo_root>\config`
+
+* Data folder (may contain additional data, e.g. video recordings and dummy images): 
+  * Linux: `<repo_root>/data`
+  * Windows: `<repo_root>\data`
+
 ---
+
+## Config File
+
+All app settings can be configured in file `config.toml`, which is located in the `config` folder
+(see the corresponding section in [Installation](#installation)).

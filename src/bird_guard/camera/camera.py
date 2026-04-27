@@ -8,8 +8,11 @@ from typing import Tuple
 
 from bird_guard.camera.camera_config import ModuleConfig_Camera
 from bird_guard.vision.utils.image_utils import Image
+from bird_guard.utils import PlatformInfo
 
-CAM_MODULE_BASE_PATH = Path(__file__).resolve().parents[0]
+
+CAM_MODULE_NAME = "camera"
+
 
 # ============
 # CAMERA FRAME
@@ -110,9 +113,10 @@ class PiCam2Camera(Camera):
 # DUMMY CAMERA
 # ============
 class DummyCamera(Camera):
-    def __init__(self, settings: ModuleConfig_Camera):
+    def __init__(self, settings: ModuleConfig_Camera, app_name: str):
         super().__init__(settings)
 
+        self.app_name: str = app_name
         self.dummy_images: list[Image] = []
         self.counter: int = 0
 
@@ -126,7 +130,7 @@ class DummyCamera(Camera):
         self.counter = 0
 
         # get images in frame folder
-        image_folder = CAM_MODULE_BASE_PATH.parents[2] / "data/dummy_images" / self.settings.dummy_camera.images_subfolder
+        image_folder = PlatformInfo.get_data_path(self.app_name) / "dummy_images" / self.settings.dummy_camera.images_subfolder
         jpeg_files = list(image_folder.glob("*.jp*g"))
 
         # test: prepend corresponding background image (TODO: remove or implement)

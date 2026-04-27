@@ -11,6 +11,8 @@ from typing import Any
 
 from bird_guard.notify.notify_config import ModuleConfig_Ntfy
 from bird_guard.camera.camera_config import ModuleConfig_Camera
+from bird_guard.vision.vision_config import ModuleConfig_Vision
+
 
 # ======
 # CONFIG
@@ -22,13 +24,15 @@ class AppConfig:
     """
     ntfy: ModuleConfig_Ntfy = field(default_factory=ModuleConfig_Ntfy)
     camera: ModuleConfig_Camera = field(default_factory=ModuleConfig_Camera)
+    vision: ModuleConfig_Vision = field(default_factory=ModuleConfig_Vision)
 
     # implement reader
     @classmethod
     def from_dict(cls, config_file_data: dict[str, Any]) -> "AppConfig":
         return cls(
             ntfy=ModuleConfig_Ntfy.from_dict(config_file_data.get("ntfy", {})),
-            camera=ModuleConfig_Camera.from_dict(config_file_data.get("camera", {}))
+            camera=ModuleConfig_Camera.from_dict(config_file_data.get("camera", {})),
+            vision = ModuleConfig_Vision.from_dict(config_file_data.get("vision", {}))
         )
 # ===========
 
@@ -75,6 +79,7 @@ class ConfigHandler:
 
         # Read and parse the data
         try:
+            print(f"Loading config file: {config_file} ...")
             with open(config_file, "rb") as f:
                 config_file_data = tomllib.load(f)
 
@@ -92,6 +97,7 @@ class ConfigHandler:
         try:
             with open(config_file, "w") as f:
                 toml.dump(asdict(config_data), f)   # type: ignore
+            print(f"Saved config file: {config_file}")
             return True
         except (PermissionError, OSError) as e:
             print(f"Error when writing config file: {e}")
