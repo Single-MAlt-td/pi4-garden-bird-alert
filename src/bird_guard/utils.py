@@ -7,7 +7,7 @@ from enum import Enum
 import platform
 from pathlib import Path
 from platformdirs import user_config_path, user_data_path
-from importlib.resources import files, as_file
+from importlib.resources import files
 import time
 
 

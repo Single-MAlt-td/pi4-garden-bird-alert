@@ -23,13 +23,9 @@ Use the `video_frame_extractor_gui` tool to extract the frames from the download
 
 * Start the tool (tkinter UI): `python tools/video_frame_extractor_gui.py`
 * Select the downloaded video file
-* Adjust settings:
-  * Start frame: 110
-  * End frame: 1055
-  * Frame skip: 5
-  * (leave target dimensions and JPG quality as is)
-* Click `Start export` and select the target folder: `data/dummy_images/duck_5fps`
-* Click `Select folder` and wait until the process is finished (the progress update might get stuck (known bug))
+* Adjust settings
+* Click `Select folder` and select the target folder (in `<data>/dummy_images/`)
+* Click `Start export` and wait until the process is finished (the progress update might get stuck (known bug))
 
 
 ## Example
@@ -44,7 +40,13 @@ See [CREDIT.md](../CREDIT.md) and download the original video (`25829-352978434.
 
 **Extract video frames:**
 
-Follow the steps from [here](#extracting-frames-from-a-video) and choose `<data>/dummy_images/duck_5fps` as output directory.
+Follow the steps from [here](#extracting-frames-from-a-video) and:
+* choose `<data>/dummy_images/duck_5fps` as output directory
+* Adjust settings:
+  * Start frame: 110
+  * End frame: 1055
+  * Frame skip: 5
+  * (leave target dimensions and JPG quality as is)
 
 **Configure:**
 
