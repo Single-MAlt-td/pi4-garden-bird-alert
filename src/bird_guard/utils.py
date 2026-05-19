@@ -72,9 +72,8 @@ class PlatformInfo:
             return user_data_path(app_name, appauthor=False) / "data"
 
     @staticmethod
-    def get_module_path(app_module_name: str) -> Path:
-        """Return path to the module (named 'app.module.[...]')"""
-        return Path(str(files(app_module_name)))
+    def get_tests_path(app_name: str) -> Path:
+        return PlatformInfo.get_data_path(app_name).parent / "tests"
 
 
 # =========

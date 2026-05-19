@@ -46,16 +46,16 @@ class ImageUtils:
         pass
 
     @staticmethod
-    def get_blank_image(image_size_wh: tuple[int, int], color_bgr: tuple[int, ...] = (0, 0, 0)) -> Image:
+    def get_blank_bgr_image(image_size_wh: tuple[int, int], color_bgr: tuple[int, ...] = (0, 0, 0)) -> BGRImage:
         """
-        Get a blank image filled with the given color
+        Get a blank BGR image filled with the given color
 
         Args:
             image_size_wh: (width, height) specifying the image size
             color_bgr: tuple of dynamic length specifying the color and color dimension (e.g. black is (0,) for grayscale, (0,0,0) for BGR)
 
         Returns:
-             Image array (uint8)
+             BGR image array (uint8)
         """
         return np.full((*reversed(image_size_wh), len(color_bgr)), color_bgr, dtype=np.uint8)
 
@@ -121,9 +121,13 @@ class ImageUtils:
         # rescale image
         is_upscale = (scale > 1.0)
         if is_upscale:
-            scaled_image = cv2.resize(image, (scaled_image_width, scaled_image_height), interpolation=cv2.INTER_LINEAR)
+            if interpolation_method is None:
+                interpolation_method = cv2.INTER_LINEAR
+            scaled_image = cv2.resize(image, (scaled_image_width, scaled_image_height), interpolation=interpolation_method)
         else:
-            scaled_image = cv2.resize(image, (scaled_image_width, scaled_image_height), interpolation=cv2.INTER_AREA)
+            if interpolation_method is None:
+                interpolation_method = cv2.INTER_AREA
+            scaled_image = cv2.resize(image, (scaled_image_width, scaled_image_height), interpolation=interpolation_method)
 
         # pad image with black borders (if needed)
         if (scaled_image_width, scaled_image_height) != new_size_wh:
@@ -157,25 +161,43 @@ class ImageUtils:
             return scaled_image
 
     @staticmethod
+    def color_image_to_yuv420(bgr_image: BGRImage) -> YUV420Image:
+        return cv2.cvtColor(bgr_image, cv2.COLOR_BGR2YUV_I420)
+
+    @staticmethod
+    def yuv420_image_to_color(yuv40_image: YUV420Image) -> BGRImage:
+        return cv2.cvtColor(yuv40_image, cv2.COLOR_YUV2BGR_I420)
+
+    @staticmethod
     def gray_image_to_color(gray: GrayImage) -> BGRImage:
         return cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
 
     @staticmethod
-    def color_image_to_gray(image: BGRImage) -> GrayImage:
-        return cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    def color_image_to_gray(bgr_image: BGRImage) -> GrayImage:
+        return cv2.cvtColor(bgr_image, cv2.COLOR_BGR2GRAY)
 
     @staticmethod
-    def get_gray_image_from_yuv420(image: YUV420Image) -> GrayImage:
-        if len(image.shape) != 2 or image.shape[0] % 3 != 0:
+    def yuv420_image_to_gray(yuv40_image: YUV420Image) -> GrayImage:
+        if len(yuv40_image.shape) != 2 or yuv40_image.shape[0] % 3 != 0:
             raise ValueError("Expected a YUV420 image, but got something else!")
 
-        height = (image.shape[0] * 2) // 3
-        return image[:height, :]
+        height = (yuv40_image.shape[0] * 2) // 3
+        return yuv40_image[:height, :]
 
     @staticmethod
-    def is_float_image(float_image: FloatImage) -> bool:
+    def float_image_to_gray(float_image: FloatImage) -> GrayImage:
+        if ImageUtils.is_float_image(float_image):
+            return np.uint8(float_image * 255)
+        else:
+            raise ArgumentTypeError(f"Image is not a float image!")
+
+
+    @staticmethod
+    def is_float_image(float_image: FloatImage, value_check:bool = True) -> bool:
         if np.issubdtype(float_image.dtype, np.floating):
-            if np.all((0.0 <= float_image) & (float_image <= 1.0)):
+            if value_check and np.all((0.0 <= float_image) & (float_image <= 1.0)):
+                return True
+            else:
                 return True
         return False
 
@@ -194,13 +216,6 @@ class ImageUtils:
                 if np.all((0 <= color_image) & (color_image <= 255)):
                     return True
         return False
-
-    @staticmethod
-    def float_image_to_gray(float_image: FloatImage) -> GrayImage:
-        if ImageUtils.is_float_image(float_image):
-            return np.uint8(float_image * 255)
-        else:
-            raise ArgumentTypeError(f"Image is not a float image!")
 
     @staticmethod
     def mix_images_to_color(base_image: BGRImage,
@@ -250,7 +265,7 @@ class ImageUtils:
     def draw_text(color_image: BGRImage,
                   text_list: str | list[str],
                   pos: tuple[int, int],
-                  color: BGRColor = (255, 255, 255),
+                  text_color_bgr: BGRColor = (255, 255, 255),
                   anchor: TextAnchor = TextAnchor.BOTTOM_LEFT,
                   font_scale: float = 1.0,
                   thickness: int = 1,
@@ -263,7 +278,7 @@ class ImageUtils:
             color_image: The target image
             text_list: A text or list of texts to be drawn (each list element will be drawn in a new line)
             pos: Target pixel position of the text anchor
-            color: Text color
+            text_color_bgr: Text color
             anchor: Defines which point on the bounding box of the text corresponds to the target pixel position (pos) (default: BOTTOM_LEFT)
             font_scale: Font scaling factor that acts on the font base size (default: 1.0)
             thickness: Integer line thickness of the font (default: 1)
@@ -325,7 +340,7 @@ class ImageUtils:
                 (pos[0] - x_shift, pos[1] - y_shift),
                 cv2.FONT_HERSHEY_SIMPLEX,
                 font_scale,
-                color,
+                text_color_bgr,
                 thickness,
                 cv2.LINE_AA,
             )

@@ -47,7 +47,7 @@ class VisionUtils:
             case Frame.FrameType.GRAY:
                 gray = frame.data
             case Frame.FrameType.LORES:
-                gray = ImageUtils.get_gray_image_from_yuv420(frame.data)
+                gray = ImageUtils.yuv420_image_to_gray(frame.data)
             case _:
                 raise NotImplementedError("Frame type not yet implemented.")
 
@@ -131,6 +131,8 @@ class VisionUtils:
         if activity_map is None:
             activity_map = current_activity_map.copy()
         else:
-            activity_map = cv2.accumulateWeighted(current_activity_map, activity_map, alpha)
+            activity_map = cv2.accumulateWeighted(current_activity_map, activity_map, alpha)    # dst = (1 - alpha) * dst + alpha * src
 
         return activity_map, current_activity_map
+
+

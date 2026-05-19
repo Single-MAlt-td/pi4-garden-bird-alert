@@ -12,13 +12,15 @@ class SubSubConfig_ActivityMap:
     Settings for the activity map
     """
     cell_size: tuple[int, int] = (10, 10)       # cell size
-    alpha: float = 0.02                         # alpha parameter of the cv2.accumulateWeighted function
+    alpha: float = 0.01                         # alpha parameter of the cv2.accumulateWeighted function
+    alpha_warmup: float = 0.05                  # alpha for warmup phase
 
     @classmethod
     def from_dict(cls, config_file_data_vision: dict[str, Any]) -> "SubSubConfig_ActivityMap":
         return cls(
             cell_size=tuple(config_file_data_vision.get("cell_size", cls.cell_size)),
             alpha=float(config_file_data_vision.get("alpha", cls.alpha)),
+            alpha_warmup=float(config_file_data_vision.get("alpha_warmup", cls.alpha)),
         )
 
 

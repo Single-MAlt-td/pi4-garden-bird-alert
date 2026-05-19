@@ -9,6 +9,7 @@ import toml
 from dataclasses import dataclass, field, asdict
 from typing import Any
 
+from bird_guard.recorder import Config_VideoRecorder
 from bird_guard.notify.notify_config import ModuleConfig_Ntfy
 from bird_guard.camera.camera_config import ModuleConfig_Camera
 from bird_guard.vision.vision_config import ModuleConfig_Vision
@@ -22,6 +23,7 @@ class AppConfig:
     """
     Main config file for the entire app + modules
     """
+    recorder: Config_VideoRecorder = field(default_factory=Config_VideoRecorder)
     ntfy: ModuleConfig_Ntfy = field(default_factory=ModuleConfig_Ntfy)
     camera: ModuleConfig_Camera = field(default_factory=ModuleConfig_Camera)
     vision: ModuleConfig_Vision = field(default_factory=ModuleConfig_Vision)
@@ -30,6 +32,7 @@ class AppConfig:
     @classmethod
     def from_dict(cls, config_file_data: dict[str, Any]) -> "AppConfig":
         return cls(
+            recorder=Config_VideoRecorder.from_dict(config_file_data.get("recorder", {})),
             ntfy=ModuleConfig_Ntfy.from_dict(config_file_data.get("ntfy", {})),
             camera=ModuleConfig_Camera.from_dict(config_file_data.get("camera", {})),
             vision = ModuleConfig_Vision.from_dict(config_file_data.get("vision", {}))

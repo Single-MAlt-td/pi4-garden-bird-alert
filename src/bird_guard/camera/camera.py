@@ -1,5 +1,5 @@
+import time
 from pathlib import Path
-import numpy as np
 import cv2
 
 from abc import ABC, abstractmethod
@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Tuple
 
 from bird_guard.camera.camera_config import ModuleConfig_Camera
-from bird_guard.vision.utils.image_utils import Image
+from bird_guard.vision.utils.image_utils import Image, ImageUtils, BGRImage
 from bird_guard.utils import PlatformInfo
 
 
@@ -31,20 +31,45 @@ class Frame:
         COLOR = 3   # high-res BGR image
 
     def __init__(self,
-                 frame: Image = None,
+                 image: Image | None = None,
                  frame_type: FrameType = FrameType.UNSET,
-                 dimensions_xy: Tuple[int, int] = (None, None)
+                 image_size: Tuple[int, int] = (None, None),
+                 timestamp_override: float | None = None
                  ):
-        self.data: Image = frame                 # actual image array
-        self.type: Frame.FrameType = frame_type     # internal image type
-        self.dim_x, self.dim_y = dimensions_xy      # actual main image dimensions (image array may hold additional data (e.g. YUV420))
+        self.data: Image = image                            # actual image array
+        self.type: Frame.FrameType = frame_type             # internal image type
+        self.width_image, self.height_image = image_size    # actual main image dimensions (image data array may hold additional data (e.g. YUV420))
+        self.timestamp = time.time() if timestamp_override is None else timestamp_override
 
-        self.height: int or None = None     # height of the image data stored in the image array
-        self.width: int or None = None      # width of the image data stored in the image array
+    @property
+    def width_data(self):
+        # width of the image data stored in the image array
+        return self.data.shape[1] if self.data is not None else None
 
-        # get height and with of the image data stored in the image array
-        if frame is not None:
-            self.height, self.width, *_ = frame.data.shape
+    @property
+    def height_data(self):
+        # height of the image data stored in the image array
+        return self.data.shape[0] if self.data is not None else None
+
+    def copy(self) -> "Frame":
+        return Frame(self.data.copy() if self.data is not None else None,
+                     self.type,
+                     (self.width_image, self.height_image))
+
+    def convert_to_bgr_color_image(self):
+        match self.type:
+            case Frame.FrameType.COLOR:
+                pass
+            case Frame.FrameType.LORES:
+                self.data = ImageUtils.yuv420_image_to_color(self.data)
+            case Frame.FrameType.GRAY:
+                self.data = ImageUtils.gray_image_to_color(self.data)
+            case _:
+                raise RuntimeError("Unexpected type")
+
+        self.type = Frame.FrameType.COLOR
+        self.width_image = self.width_data
+        self.height_image = self.height_data
 
 
 # =================
@@ -119,6 +144,7 @@ class DummyCamera(Camera):
         self.app_name: str = app_name
         self.dummy_images: list[Image] = []
         self.counter: int = 0
+        self.simulated_time: float = time.time()    # use the current time as initial time (because why not)
 
         self._initialize_camera()
 
@@ -133,9 +159,6 @@ class DummyCamera(Camera):
         image_folder = PlatformInfo.get_data_path(self.app_name) / "dummy_images" / self.settings.dummy_camera.images_subfolder
         jpeg_files = list(image_folder.glob("*.jp*g"))
 
-        # test: prepend corresponding background image (TODO: remove or implement)
-        #jpeg_files.insert(0, image_folder.parent / "ducks_5fps_background_MOG2.jpg")
-
         print(f"Loading dummy images from {image_folder} ...")
         for image_filename in jpeg_files:
             image = cv2.imread(image_filename, cv2.IMREAD_COLOR)
@@ -149,15 +172,18 @@ class DummyCamera(Camera):
     def get_frame(self, frame_type: Frame.FrameType = Frame.FrameType.COLOR) -> Frame:
         idx_return = self.counter
         self.counter = (self.counter + 1) % len(self.dummy_images)
+        self.simulated_time += 1.0 / self.settings.fps
 
         if frame_type == Frame.FrameType.COLOR:
 
-            return Frame(self.dummy_images[idx_return], frame_type, self.settings.color_image_size)
+            return Frame(self.dummy_images[idx_return], frame_type, self.settings.color_image_size,
+                         timestamp_override=self.simulated_time)
 
         elif frame_type == Frame.FrameType.LORES:
 
             lores_img = cv2.resize(self.dummy_images[idx_return], self.settings.lores_image_size)
-            return Frame(cv2.cvtColor(lores_img, cv2.COLOR_BGR2YUV_I420), frame_type, self.settings.lores_image_size)
+            return Frame(cv2.cvtColor(lores_img, cv2.COLOR_BGR2YUV_I420), frame_type, self.settings.lores_image_size,
+                         timestamp_override=self.simulated_time)
 
         else:
             raise NotImplementedError("Frame type not yet implemented.")

@@ -8,7 +8,9 @@ from dataclasses import dataclass, field
 import numpy as np
 import cv2
 
-from bird_guard.vision.utils.image_utils import ImageUtils, Image
+from bird_guard.vision.utils.image_utils import ImageUtils, Image, FloatImage, GrayImage, BGRImage
+from bird_guard.vision.utils.vision_utils import VisionUtils, Contours
+
 
 # ============
 # Debug Viewer
@@ -97,7 +99,7 @@ class DebugViewer:
         """
         self.image_storage[name] = image
 
-    def _get_image(self, name: str) -> Image or None:
+    def _get_image(self, name: str) -> Image | None:
         if name in self.image_storage:
             return self.image_storage[name]
         else:
@@ -134,10 +136,10 @@ class DebugViewer:
                             raise ValueError(f"Expected image with 1 or 3 color channels, but got {im_channels[0]}")
                     else:
                         # no image set -> build black dummy image
-                        image = ImageUtils.get_blank_image((sub_image_width, sub_image_height), (0, 0, 0))
+                        image = ImageUtils.get_blank_bgr_image((sub_image_width, sub_image_height), (0, 0, 0))
                 else:
                     # no image assigned -> build black dummy image
-                    image = ImageUtils.get_blank_image((sub_image_width, sub_image_height), (0, 0, 0))
+                    image = ImageUtils.get_blank_bgr_image((sub_image_width, sub_image_height), (0, 0, 0))
 
                 im_matrix_cols.append(copy.copy(image))
             im_matrix_rows.append(im_matrix_cols)
@@ -153,3 +155,69 @@ class DebugViewer:
 
         # show the final image matrix in the debug window
         cv2.imshow(self.window_name, cv2.resize(combined, (self.viewer_config.width, self.viewer_config.height)))
+
+
+# ==========
+# DebugUtils
+# ==========
+class DebugUtils:
+    def __init__(self):
+        pass
+
+    @staticmethod
+    def draw_activity_mix_image(activity_map: FloatImage,
+                                gray_base_image: GrayImage,
+                                current_activity_map: FloatImage,
+                                normalize:bool = True) -> BGRImage:
+        # color the gray base image as follows:
+        # magenta: activity background without current activity
+        # yellow:  current activity with less common activity
+        # red:     current activity with at least the same common activity
+
+        if normalize:
+            val = max(float(np.max(activity_map)), 0.1)
+        else:
+            val = 1.0   # not efficient, but wayne
+
+        # subtract blue for current activity -> yellow, where current activity happens
+        mix_color = ImageUtils.mix_images_to_color(
+            ImageUtils.gray_image_to_color(gray_base_image),
+            (1.0,) * 3,
+            ImageUtils.gray_image_to_color(ImageUtils.float_image_to_gray(np.clip(current_activity_map/val, 0.0, 1.0))),
+            (-1.0, 0.0, 0.0)
+        )
+
+        # subtract green for long-term activity map -> red, where current activity is common
+        mix_color = ImageUtils.mix_images_to_color(
+            mix_color,
+            (1.0,) * 3,
+            ImageUtils.gray_image_to_color(ImageUtils.float_image_to_gray(activity_map/val)),
+            (0.0, -1.0, 0.0)
+        )
+
+        return mix_color
+
+    @staticmethod
+    def draw_debug_image(gray_base_image: GrayImage,
+                         all_contours: Contours,
+                         big_contours: Contours,
+                         current_activity_map: FloatImage) -> BGRImage:
+        # convert to color image for debug drawing in colors
+        debug_img = ImageUtils.gray_image_to_color(gray_base_image)
+
+
+        test_binary_image = (current_activity_map > 0.75)
+        debug_img = ImageUtils.mix_in_binary_image(debug_img, np.float32(test_binary_image), (1.0, 1.0, 0.0))
+
+
+        # draw small and big contours
+        cv2.drawContours(debug_img, all_contours, -1, (0, 0, 255), 2)
+        cv2.drawContours(debug_img, big_contours, -1, (0, 255, 0), 2)
+
+        # get and draw bounding boxes of the big contours
+        for contour in big_contours:
+            bbx = VisionUtils.Rect.from_contour(contour)
+            bbx.draw(debug_img, (0, 255, 255), 2)
+
+        return debug_img
+

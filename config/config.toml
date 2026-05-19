@@ -1,3 +1,9 @@
+[recorder]
+enable = true
+history_seconds = 4
+codec = "XVID"
+file_ext = "avi"
+
 [ntfy]
 url = "https://ntfy.sh"
 topic = "NTFY_TOPIC_URL"
@@ -19,4 +25,5 @@ speed_factor = 1
 
 [vision.motion_detector.activity_map]
 cell_size = [ 10, 10,]
-alpha = 0.02
+alpha = 0.01
+alpha_warmup = 0.05

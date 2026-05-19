@@ -2,6 +2,7 @@ import cv2
 
 from bird_guard.utils import PlatformInfo, FPSTiming
 from bird_guard.config import ConfigHandler
+from bird_guard.recorder import VideoRecorder
 from bird_guard.notify.ntfy_client import NtfyHandler
 from bird_guard.camera.camera import DummyCamera, PiCam2Camera, Frame
 from bird_guard.vision.vision import MotionDetector
@@ -48,18 +49,38 @@ def main():
     fps_timing = FPSTiming(1.0 / (settings.camera.fps * speed_factor))
     wait_key_enabled = False
 
+    # init recorder
+    if settings.recorder.enable:
+        recorder = VideoRecorder(settings.camera.fps, PlatformInfo.get_data_path(APP_NAME) / "recordings", settings.recorder)
+        print("Video recorder enabled!")
+    else:
+        recorder = None
+
     # test process frames
     print("HINT: Press SPACE to single step, TAB to continue and Q or ESCAPE to quit.")
     while True:
         # start iteration time measurement
         fps_timing.start_measurement()
 
-        # get frame
+        # get frames
         frame = camera.get_frame(Frame.FrameType.LORES)
+        frame_hires = None
+        if recorder:
+            frame_hires = camera.get_frame(Frame.FrameType.COLOR)
+
+        # store hires color frame in recorder (FIFO)
+        if recorder:
+            recorder.put_image(frame_hires)
 
         # detect
         if motion_detector.detect_movement(frame):
-            print("MOVEMENT detected!")
+            if recorder and not recorder.is_recording():
+                rec_file_name = recorder.start_recording()
+                print(f"Started recording to: {rec_file_name}")
+        else:
+            if recorder and recorder.is_recording():
+                recorder.stop_recording()
+                print("Recording finished!")
 
         # act on key presses
         key = cv2.waitKey(1 - wait_key_enabled)

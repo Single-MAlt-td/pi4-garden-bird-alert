@@ -25,9 +25,10 @@ from PIL import Image as PILImage, ImageTk
 
 from bird_guard.config import ConfigHandler
 from bird_guard.utils import PlatformInfo, FPSTiming
-from bird_guard.camera.camera import PiCam2Camera, Frame
+from bird_guard.camera.camera import PiCam2Camera, Frame, DummyCamera
 from bird_guard.vision.utils.vision_utils import VisionUtils
 from bird_guard.vision.utils.image_utils import ImageUtils
+from bird_guard.recorder import VideoRecorder, Config_VideoRecorder
 
 
 APP_NAME = "bird_guard"
@@ -35,17 +36,9 @@ PREVIEW_SIZE = (960, 540)
 
 
 def frame_to_cv_image(frame: Frame, frame_type: Frame.FrameType):
-    """
-    Return a cv2 image.
-    COLOR should be BGR or RGB depending on your camera implementation.
-    LORES is converted to grayscale.
-    """
-    if frame_type == Frame.FrameType.LORES:
-        return VisionUtils.get_frame_as_gray_image(frame)
 
-    # Adjust this line if your Frame stores the image differently.
-    if hasattr(frame, "image"):
-        return frame.image
+    if frame_type == Frame.FrameType.LORES:
+        return cv2.cvtColor(frame.data, cv2.COLOR_YUV2BGR_I420)
 
     if hasattr(frame, "data"):
         return frame.data
@@ -96,7 +89,7 @@ class VideoRecorderGui:
         self.running = False
         self.recording = False
         self.worker_thread: threading.Thread | None = None
-        self.video_writer: cv2.VideoWriter | None = None
+        self.video_recorder: VideoRecorder | None = None
         self.current_recording_path: Path | None = None
         self.recording_start_time: float | None = None
 
@@ -199,7 +192,16 @@ class VideoRecorderGui:
 
         self.apply_camera_settings()
 
-        self.camera = PiCam2Camera(self.settings.camera)
+        match PlatformInfo.get_platform():
+            case PlatformInfo.OperatingSystem.PROBABLY_RASPI:
+                print("Detected OS is likely Raspi -> Using Picamera2!")
+                self.camera = PiCam2Camera(self.settings.camera)
+            case PlatformInfo.OperatingSystem.WINDOWS | PlatformInfo.OperatingSystem.LINUX:
+                print("Detected OS is non-Raspi -> Using dummy camera!")
+                self.camera = DummyCamera(self.settings.camera, APP_NAME)
+            case _:
+                raise NotImplementedError(f"Platform {PlatformInfo.get_platform_name()} is not supported.")
+
         self.running = True
         self.worker_thread = threading.Thread(target=self.capture_loop, daemon=True)
         self.worker_thread.start()
@@ -213,49 +215,43 @@ class VideoRecorderGui:
             return
 
         fps = int(self.fps_var.get())
-        frame_type = self.get_frame_type()
 
-        if frame_type == Frame.FrameType.LORES:
-            size = (int(self.lores_w_var.get()), int(self.lores_h_var.get()))
-        else:
-            size = (int(self.color_w_var.get()), int(self.color_h_var.get()))
+        settings = Config_VideoRecorder(
+            enable=True,
+            history_seconds=0,
+        )
 
-        filename = datetime.now().strftime("%Y-%m-%d_%H-%M-%S.mp4")
-        output_path = self.recording_dir / filename
+        self.video_recorder = VideoRecorder(
+            FPS=fps,
+            output_path=self.recording_dir,
+            settings=settings,
+        )
 
-        print(f"Recording to: {output_path}")
-
-        self.current_recording_path = output_path
-        self.recording_start_time = time.monotonic()
-
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        self.video_writer = cv2.VideoWriter(str(output_path), fourcc, fps, size)
-
-        if not self.video_writer.isOpened():
-            self.video_writer = None
-            self.status_var.set("Could not open video writer")
-            return
+        output_file = self.video_recorder.start_recording()
 
         self.recording = True
+        self.recording_start_time = time.monotonic()
+        self.current_recording_path = Path(output_file)
+
         self.status_var.set("Recording")
-        self.recording_status_var.set(f"Recording: {output_path.name} | 00:00")
+        self.recording_status_var.set(f"Recording to: {self.current_recording_path.name}")
 
     def stop_recording(self):
-        saved_path = self.current_recording_path
-
         self.recording = False
 
-        if self.video_writer is not None:
-            self.video_writer.release()
-            self.video_writer = None
+        saved_path = self.current_recording_path
+
+        if self.video_recorder is not None:
+            self.video_recorder.stop_recording()
+            self.video_recorder = None
 
         if saved_path is not None:
+            self.current_recording_path = saved_path
             print(f"Saved recording: {saved_path}")
-            self.recording_status_var.set(f"Saved: {saved_path.name}")
+            self.recording_status_var.set(f"Saved: {self.current_recording_path.name}")
         else:
-            self.recording_status_var.set("Recording stopped")
+            self.recording_status_var.set("Recording stopped, no video saved")
 
-        self.current_recording_path = None
         self.recording_start_time = None
         self.status_var.set("Recording stopped")
 
@@ -275,19 +271,8 @@ class VideoRecorderGui:
 
                 self.root.after(0, self.update_preview)
 
-                if self.recording and self.video_writer is not None:
-                    video_frame = ensure_bgr(image)
-
-                    expected_w = int(self.color_w_var.get()) if frame_type == Frame.FrameType.COLOR else int(self.lores_w_var.get())
-                    expected_h = int(self.color_h_var.get()) if frame_type == Frame.FrameType.COLOR else int(self.lores_h_var.get())
-
-                    if video_frame.shape[1] != expected_w or video_frame.shape[0] != expected_h:
-                        video_frame = cv2.resize(video_frame, (expected_w, expected_h), interpolation=cv2.INTER_AREA)
-
-                    if video_frame.dtype != "uint8":
-                        video_frame = video_frame.astype("uint8")
-
-                    self.video_writer.write(video_frame)
+                if self.recording and self.video_recorder is not None:
+                    self.video_recorder.put_image(frame)
 
             except Exception as exc:
                 self.status_var.set(f"Error: {exc}")
