@@ -110,7 +110,7 @@ Ensure your venv is activated! Then just execute:
 bird-guard
 ```
 
-On a similar Raspberry Pi system, the camera detection starts immediately and will run until the user quits (press Q ore Escape).
+On a similar Raspberry Pi system, the camera detection starts immediately and will run until the user quits (press Q or Escape).
 
 On a PC, the detection system also starts immediately, but uses the dummy camera, which replays the included video example (data folder is configurable in the `config.toml -> dummy_data_subfolder`). Press SPACE to pause the replay and step through the frames manually. Press TAB to continue the auto-replay.
 
@@ -155,8 +155,7 @@ Setup PyCharm:
 
 #### Starting the App (main.py)
 
-* Generate test frame images for the dummy camera (see: [ducks_5fps/README.md](data/dummy_cam_data/ducks_5fps/README.md))
-* It should now be possible to open and run `src/bird_guard/main.py` directly in PyCharm
+* Run `src/bird_guard/main.py` directly in PyCharm
 
 
 ### Manual installation
