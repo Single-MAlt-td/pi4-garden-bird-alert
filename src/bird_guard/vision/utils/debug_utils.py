@@ -128,8 +128,7 @@ class DebugViewer:
                         if im_channels == 1:
                             if ImageUtils.is_float_image(image):
                                 image = ImageUtils.float_image_to_gray(image)
-                            else:
-                                image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+                            image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
                         elif im_channels == 3:
                             pass
                         else:
@@ -163,6 +162,26 @@ class DebugViewer:
 class DebugUtils:
     def __init__(self):
         pass
+
+    @staticmethod
+    def show_matrix(matrix: np.ndarray):
+        import matplotlib
+        matplotlib.use("TkAgg")
+        import matplotlib.pyplot as plt
+
+        plt.ion()   # set interactive mode to prevent window freezes
+
+        fig, ax = plt.subplots()
+
+        if ImageUtils.is_color_image(matrix):
+            ax.imshow(cv2.cvtColor(matrix, cv2.COLOR_BGR2RGB))
+        else:
+            im = ax.imshow(matrix, cmap='gray')
+            fig.colorbar(im, ax=ax)
+        
+        ax.set_title("Matrix view")
+        plt.show(block=False)   # non-blocking call to prevent window freezes
+        plt.pause(0.05)
 
     @staticmethod
     def draw_activity_mix_image(activity_map: FloatImage,

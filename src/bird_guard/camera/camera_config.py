@@ -14,13 +14,13 @@ class SubConfig_DummyCamera:
     """
     Dummy camera specific settings
     """
-    images_subfolder: str = "ducks_5fps"    # name of the subfolder in data/dummy_images/ containing the images to be used
-    speed_factor: int = 1                   # multiplicator for the camera fps for faster debugging with the dummy camera
+    dummy_data_subfolder: str = "gardenBird1_vid_cropped"    # name of the subfolder in data/dummy_cam_data/ containing the images and/or videos to be used
+    speed_factor: int = 1                       # factor for the camera fps to increase replay speed of the dummy camera
 
     @classmethod
     def from_dict(cls, config_file_data_camera: dict[str, Any]) -> "SubConfig_DummyCamera":
         return cls(
-            images_subfolder=config_file_data_camera.get("images_subfolder", cls.images_subfolder),
+            dummy_data_subfolder=config_file_data_camera.get("dummy_data_subfolder", cls.dummy_data_subfolder),
             speed_factor=int(config_file_data_camera.get("speed_factor", cls.speed_factor)),
         )
 

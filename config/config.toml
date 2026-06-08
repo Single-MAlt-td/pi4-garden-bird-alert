@@ -1,5 +1,6 @@
 [recorder]
 enable = true
+simulate = true
 history_seconds = 4
 codec = "XVID"
 file_ext = "avi"
@@ -20,10 +21,10 @@ debug = true
 ISO = 100
 
 [camera.dummy_camera]
-images_subfolder = "ducks_5fps"
+dummy_data_subfolder = "gardenBird1_vid_cropped"
 speed_factor = 1
 
 [vision.motion_detector.activity_map]
 cell_size = [ 10, 10,]
-alpha = 0.01
+alpha = 0.05
 alpha_warmup = 0.05

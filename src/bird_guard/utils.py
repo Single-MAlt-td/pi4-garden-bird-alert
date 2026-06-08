@@ -1,14 +1,29 @@
 """
 General utilities.
 """
-
+from dataclasses import dataclass
 from enum import Enum
-
 import platform
 from pathlib import Path
 from platformdirs import user_config_path, user_data_path
-from importlib.resources import files
 import time
+
+import cv2
+
+from bird_guard.vision.utils.image_utils import BGRImage, YUV420Image
+
+
+# ---------
+# DebugInfo
+# ---------
+@dataclass
+class DebugInfo:
+    """Dataclass to provide debug data to modules from the main program"""
+    is_dummy_camera: bool = False
+    dummy_video_frame: int = 0          # 0-based index
+    dummy_video_num_frames: int = 0
+    is_replay_paused: bool = False
+
 
 
 # ============
@@ -135,10 +150,81 @@ class FPSTiming:
         sleep_time = max(0.0, self._target_delta_time - elapsed)
 
         if verbose:
-            print(f"Waiting: {sleep_time} seconds (elapsed: {elapsed} seconds) ...")
+            str_prefix = "SLOW! " if sleep_time == 0 else ""
+            print(f"{str_prefix}Waiting: {sleep_time:.3f} seconds (elapsed: {elapsed:.3f} seconds) ...")
 
         # wait
         time.sleep(sleep_time)
 
         # set start time None to enforce another start_measurement call
         self._start_time = None
+
+
+# ===========
+# VideoPlayer
+# ===========
+class VideoPlayer:
+    def __init__(self, video_file: Path, target_fps: int | None = None):
+        self._cap = None
+        self._video_file: Path = video_file
+        self._target_fps: int = target_fps
+
+        self._vinfo_fps: int | None = None
+        self._vinfo_num_frames: int | None = None
+        self._vinfo_size_wh: tuple[int, int] | None = None
+
+        self._current_frame_index: int = 0
+        self._frame_skip: int = 0
+
+        self._open_video_file()
+
+
+    def __del__(self):
+        if self._cap is not None:
+            self._cap.release()
+
+    def _open_video_file(self):
+
+        self._cap = cv2.VideoCapture(str(self._video_file))
+        if not self._cap.isOpened():
+            raise RuntimeError(f"Failed to open video file: {self._video_file}")
+
+        self._vinfo_num_frames = int(self._cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        self._vinfo_fps = int(self._cap.get(cv2.CAP_PROP_FPS))
+        self._vinfo_size_wh = (int(self._cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+                               int(self._cap.get(cv2.CAP_PROP_FRAME_HEIGHT)))
+
+        if self._target_fps is None:
+            self._frame_skip = 0
+        else:
+            if (self._vinfo_fps % self._target_fps) == 0:
+                num_original_frames_in_target_frame = int(self._vinfo_fps / self._target_fps)
+                self._frame_skip = num_original_frames_in_target_frame - 1
+            else:
+                raise AttributeError(f"The video frame rate ({self._vinfo_fps}) must be divisible by the specified target frame rate ({self._target_fps})!")
+
+    def get_num_frames(self) -> int | None:
+        return self._vinfo_num_frames
+
+    def set_current_frame_index(self, frame_index: int):
+        self._current_frame_index = max(0, min(frame_index, self.get_num_frames() - 1))
+
+    def get_next_frame(self) -> BGRImage:
+        if self._cap is None:
+            raise RuntimeError("Failed to get frame: No video loaded!")
+
+        # get frame
+        self._cap.set(cv2.CAP_PROP_POS_FRAMES, self._current_frame_index)
+        ok, frame_image = self._cap.read()
+
+        if not ok or frame_image is None:
+            raise RuntimeError(f"Failed to read frame no {self._current_frame_index}")
+
+        # increment index
+        self._current_frame_index = (self._current_frame_index + self._frame_skip + 1) % self._vinfo_num_frames
+
+        return frame_image
+
+    def close(self):
+        if self._cap is not None:
+            self._cap.release()

@@ -5,6 +5,8 @@ from tests.utils import get_temp_output_path
 
 @pytest.fixture
 def temp_dir():
+    """Create temporary directory: tests/temp (auto-delete on teardown)"""
+
     dir_path = get_temp_output_path()
 
     # delete temp folder if it existent (clean startup)

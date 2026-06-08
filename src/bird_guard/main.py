@@ -1,6 +1,6 @@
 import cv2
 
-from bird_guard.utils import PlatformInfo, FPSTiming
+from bird_guard.utils import PlatformInfo, FPSTiming, DebugInfo
 from bird_guard.config import ConfigHandler
 from bird_guard.recorder import VideoRecorder
 from bird_guard.notify.ntfy_client import NtfyHandler
@@ -18,18 +18,24 @@ def main():
     print("bird app started")
 
     # read config
+    # -----------
     config_handler = ConfigHandler(PlatformInfo.get_config_path(APP_NAME) / "config.toml")
     settings = config_handler.get_config()
-    print(settings)
     config_handler.save_config(settings)    # TODO: Remove when config design is finished
 
+    # init debug struct
+    # -----------------
+    debug_info = DebugInfo()
+
     # init notify module
+    # ------------------
     ntfy_handler = NtfyHandler(settings.ntfy)
 
     # test notify
     ntfy_handler.send_message("Test", True)
 
     # auto-select camera depending on detected system
+    # ------------------
     speed_factor: int = 1
     match PlatformInfo.get_platform():
         case PlatformInfo.OperatingSystem.PROBABLY_RASPI:
@@ -43,20 +49,27 @@ def main():
             raise NotImplementedError(f"Platform {PlatformInfo.get_platform_name()} is not supported.")
 
     # init motion detector
+    # --------------------
     motion_detector = MotionDetector(settings.vision)
 
     # init fps timing
+    # ---------------
     fps_timing = FPSTiming(1.0 / (settings.camera.fps * speed_factor))
     wait_key_enabled = False
 
     # init recorder
+    # -------------
     if settings.recorder.enable:
         recorder = VideoRecorder(settings.camera.fps, PlatformInfo.get_data_path(APP_NAME) / "recordings", settings.recorder)
-        print("Video recorder enabled!")
+        if not settings.recorder.simulate:
+            print("Video recorder enabled!")
+        else:
+            print("Video recorder is in simulation mode!")
     else:
         recorder = None
 
-    # test process frames
+    # process frames
+    # --------------
     print("HINT: Press SPACE to single step, TAB to continue and Q or ESCAPE to quit.")
     while True:
         # start iteration time measurement
@@ -68,19 +81,32 @@ def main():
         if recorder:
             frame_hires = camera.get_frame(Frame.FrameType.COLOR)
 
+        # store dummy camera debug data
+        if isinstance(camera, DummyCamera):
+            debug_info.is_dummy_camera = True
+            debug_info.dummy_video_frame, debug_info.dummy_video_num_frames = camera.get_dummy_video_info()
+            debug_info.is_replay_paused = wait_key_enabled
+
         # store hires color frame in recorder (FIFO)
         if recorder:
             recorder.put_image(frame_hires)
 
-        # detect
-        if motion_detector.detect_movement(frame):
+        # DETECT
+        # ------
+        if motion_detector.detect_movement(frame, debug_info):
             if recorder and not recorder.is_recording():
                 rec_file_name = recorder.start_recording()
-                print(f"Started recording to: {rec_file_name}")
+                if not settings.recorder.simulate:
+                    print(f"Started recording to: {rec_file_name}")
+                else:
+                    print(f"WOULD start recording to: {rec_file_name}")
         else:
             if recorder and recorder.is_recording():
                 recorder.stop_recording()
-                print("Recording finished!")
+                if not settings.recorder.simulate:
+                    print("Recording finished!")
+                else:
+                    print("WOULD have finished recording!")
 
         # act on key presses
         key = cv2.waitKey(1 - wait_key_enabled)
@@ -97,7 +123,7 @@ def main():
 
         # wait remaining time to reach the configured FPS
         if not wait_key_enabled:
-            fps_timing.wait_remaining_time()
+            fps_timing.wait_remaining_time(verbose=False)
 
 if __name__ == "__main__":
     main()

@@ -40,15 +40,31 @@ class ImageUtils:
         BOTTOM_CENTER = 21
         BOTTOM_RIGHT = 22
 
+    """MATLAB default colors for plots (useful for plots which need distinguishable colors)"""
+    MATLAB_COLORS_BGR = [
+        (189, 114, 0),  # blue
+        (25, 83, 217),  # orange
+        (32, 177, 237), # yellow
+        (142, 47, 126), # violet
+        (48, 172, 119), # green
+        (238, 190, 77), # light-blue
+        (47, 20, 162),  # red
+    ]
+
     # ----------
 
     def __init__(self):
         pass
 
     @staticmethod
+    def get_matlab_color_bgr(color_index: int) -> BGRColor:
+        """ Return the MATLAB color with index color_index (index will loop)"""
+        return ImageUtils.MATLAB_COLORS_BGR[color_index % len(ImageUtils.MATLAB_COLORS_BGR)]
+
+    @staticmethod
     def get_blank_bgr_image(image_size_wh: tuple[int, int], color_bgr: tuple[int, ...] = (0, 0, 0)) -> BGRImage:
         """
-        Get a blank BGR image filled with the given color
+        Get a blank BGR image filled with the given color. Returns a gray image if color_bgr is a one-element tuple.
 
         Args:
             image_size_wh: (width, height) specifying the image size
@@ -61,7 +77,7 @@ class ImageUtils:
 
     @staticmethod
     def get_color_channels(image: Image) -> int:
-        """Return the number of color channels"""
+        """Returns the number of color channels of an image"""
         _, _, *image_channels = image.shape
         if image.ndim == 3:
             return image.shape[2]
@@ -71,7 +87,8 @@ class ImageUtils:
             raise ValueError(f"Unexpected number of image matrix dimensions: {image.ndim}")
 
     @staticmethod
-    def get_image_size_wh(image: Image) -> tuple[int, int]:
+    def get_image_size_wh(image: Image | FloatImage) -> tuple[int, int]:
+        """Returns the size of an image as tuple (width, height)"""
         return image.shape[1::-1]
 
     @staticmethod
@@ -191,6 +208,12 @@ class ImageUtils:
         else:
             raise ArgumentTypeError(f"Image is not a float image!")
 
+    @staticmethod
+    def gray_image_to_float(gray_image: GrayImage) -> FloatImage:
+        if ImageUtils.is_gray_image(gray_image):
+            return np.float32(gray_image) / 255.0
+        else:
+            raise ArgumentTypeError(f"Image is not a float image!")
 
     @staticmethod
     def is_float_image(float_image: FloatImage, value_check:bool = True) -> bool:
@@ -260,6 +283,38 @@ class ImageUtils:
         )
         return mix_color
 
+    @staticmethod
+    def get_multiline_text_size(text_list: str | list[str],
+                                font_scale: float = 1.0,
+                                thickness: int = 1,
+                                vertical_spacing: int = 5
+                                ):
+        """todo"""
+        # ensure text_list is a list
+        if isinstance(text_list, str):
+            text_list = [text_list]
+
+        # determine sizes of individual text lines
+        text_widths: list[int] = []
+        text_heights: list[int] = []
+        baselines: list[int] = []
+        for text in text_list:
+            # determine the bounding box size of the text
+            (text_w, text_h), baseline = cv2.getTextSize(
+                text,
+                cv2.FONT_HERSHEY_SIMPLEX,
+                font_scale,
+                thickness,
+            )
+            text_widths.append(text_w)
+            text_heights.append(text_h)
+            baselines.append(baseline)
+
+        # compute bounding box dimensions, which includes the entire text
+        text_bbx_width = max(text_widths)
+        text_bbx_height = sum(text_heights) + sum(baselines) + (len(text_list) - 1) * vertical_spacing
+
+        return text_bbx_width, text_bbx_height, text_widths, text_heights, baselines
 
     @staticmethod
     def draw_text(color_image: BGRImage,
@@ -292,25 +347,9 @@ class ImageUtils:
         if isinstance(text_list, str):
             text_list = [text_list]
 
-        # determine sizes of individual text lines
-        text_widths: list[int] = []
-        text_heights: list[int] = []
-        baselines: list[int] = []
-        for text in text_list:
-            # determine the bounding box size of the text
-            (text_w, text_h), baseline = cv2.getTextSize(
-                text,
-                cv2.FONT_HERSHEY_SIMPLEX,
-                font_scale,
-                thickness,
-            )
-            text_widths.append(text_w)
-            text_heights.append(text_h)
-            baselines.append(baseline)
-
-        # compute bounding box dimensions, which includes the entire text
-        text_bbx_width = max(text_widths)
-        text_bbx_height = sum(text_heights) + sum(baselines) + (len(text_list) - 1) * vertical_spacing
+        # get text size info
+        text_bbx_width, text_bbx_height, text_widths, text_heights, baselines = (
+            ImageUtils.get_multiline_text_size(text_list, font_scale, thickness, vertical_spacing))
 
         # extract vertical and horizontal shift factors of the given anchor
         h_anchor_val = anchor.value % 10                    # first digit encodes horizontal shift factor

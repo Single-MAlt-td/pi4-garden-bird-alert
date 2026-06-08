@@ -20,6 +20,7 @@ class Config_VideoRecorder:
     VideoRecorder specific settings
     """
     enable: bool = True         # if the recorder is enabled
+    simulate: bool = False      # only simulate recording, don't really do it (useful for testing)
     history_seconds: int = 8    # max number of seconds of video history, which shall be included at the video beginning
     codec: str = "XVID"         # codec to be used by cv2.VideoWriter (alternatives: MJPG (big files!), avc1)
     file_ext: str = "avi"       # file name extension of the recorded video file (should correspond to the codec)
@@ -28,7 +29,10 @@ class Config_VideoRecorder:
     def from_dict(cls, config_file_data_recorder: dict[str, Any]) -> "Config_VideoRecorder":
         return cls(
             enable=bool(config_file_data_recorder.get("enable", cls.enable)),
+            simulate=bool(config_file_data_recorder.get("simulate", cls.simulate)),
             history_seconds=int(config_file_data_recorder.get("history_seconds", cls.history_seconds)),
+            codec=str(config_file_data_recorder.get("codec", cls.codec)),
+            file_ext=str(config_file_data_recorder.get("file_ext", cls.file_ext)),
         )
 
 
@@ -70,10 +74,10 @@ class VideoRecorder:
     def is_recording(self) -> bool:
         return self.thread_rec is not None
 
-    def start_recording(self):
+    def start_recording(self, output_filename_without_extension: str | None = None) -> Path | None:
         # if thread is already running -> ignore start command
         if self.is_recording():
-            return
+            return None
 
         # ensure the stop queue is empty
         self.stop_event.clear()
@@ -86,11 +90,14 @@ class VideoRecorder:
                 self.recording_queue.clear()
 
         # generate output filename
-        timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-        video_path = self.output_path / f"rec_{timestamp}.{self.settings.file_ext}"
+        if output_filename_without_extension is None:
+            timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            video_path = self.output_path / f"rec_{timestamp}.{self.settings.file_ext}"
+        else:
+            video_path = self.output_path / f"{Path(output_filename_without_extension).stem}.{self.settings.file_ext}"
 
         # START the recording thread
-        self.thread_rec = threading.Thread(target=self.fnc_thread_recording, args=(video_path,), daemon=True)
+        self.thread_rec = threading.Thread(target=self._fnc_thread_recording, args=(video_path, self.settings.simulate), daemon=True)
         self.thread_rec.start()
 
         # return the filename
@@ -109,7 +116,7 @@ class VideoRecorder:
         self.thread_rec = None
 
 
-    def fnc_thread_recording(self, video_path):
+    def _fnc_thread_recording(self, video_path: Path, do_simulate: bool):
         # crate video writer
         fourcc = cv2.VideoWriter_fourcc(*self.settings.codec)
         video = None
@@ -126,6 +133,10 @@ class VideoRecorder:
             # no frame in queue -> sleep for some time to prevent high cpu usage and retry
             if frame is None:
                 time.sleep(0.01)
+                continue
+
+            # skip the entire video writer section if simulation is enabled
+            if do_simulate:
                 continue
 
             # create the video writer, if it does not yet exist

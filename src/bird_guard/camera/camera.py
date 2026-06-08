@@ -1,4 +1,5 @@
 import time
+from collections import deque
 from pathlib import Path
 import cv2
 
@@ -8,7 +9,7 @@ from typing import Tuple
 
 from bird_guard.camera.camera_config import ModuleConfig_Camera
 from bird_guard.vision.utils.image_utils import Image, ImageUtils, BGRImage
-from bird_guard.utils import PlatformInfo
+from bird_guard.utils import PlatformInfo, VideoPlayer
 
 
 CAM_MODULE_NAME = "camera"
@@ -141,49 +142,101 @@ class DummyCamera(Camera):
     def __init__(self, settings: ModuleConfig_Camera, app_name: str):
         super().__init__(settings)
 
-        self.app_name: str = app_name
-        self.dummy_images: list[Image] = []
-        self.counter: int = 0
+        self._app_name: str = app_name
+        self._dummy_images: list[Image] = []
+        self._current_index: int = 0
         self.simulated_time: float = time.time()    # use the current time as initial time (because why not)
+
+        self._video_player: VideoPlayer | None = None
+
+        # lores and color image can be retrieved for (approx) the same frame; to simulate this behavior queues are used
+        # to provide the corresponding image and the next images are only buffered, if a requested queue is empty
+        self._lores_queue = deque(maxlen=1)
+        self._color_queue = deque(maxlen=1)
 
         self._initialize_camera()
 
     def _initialize_camera(self):
         self._load_dummy_images()
+        self._buffer_images(0)
+
+    def _buffer_images(self, index: int):
+        self._lores_queue.append(self._dummy_images[index])
+        self._color_queue.append(self._dummy_images[index])
 
     def _load_dummy_images(self):
-        self.dummy_images = []
-        self.counter = 0
+        self._dummy_images = []
+        self._current_index = 0
 
-        # get images in frame folder
-        image_folder = PlatformInfo.get_data_path(self.app_name) / "dummy_images" / self.settings.dummy_camera.images_subfolder
-        jpeg_files = list(image_folder.glob("*.jp*g"))
+        dummy_cam_data_folder = (PlatformInfo.get_data_path(self._app_name) / "dummy_cam_data"
+                                 / self.settings.dummy_camera.dummy_data_subfolder)
+        supported_video_files = {".avi", ".mp4"}
+        supported_image_files = {".jpg", ".jpeg", ".png"}
 
-        print(f"Loading dummy images from {image_folder} ...")
-        for image_filename in jpeg_files:
-            image = cv2.imread(image_filename, cv2.IMREAD_COLOR)
-            self.dummy_images.append(cv2.resize(image, self.settings.color_image_size))
+        # get supported image and video files in frame folder (sorted by name)
+        dummy_files = files = sorted(
+            [elem for elem in dummy_cam_data_folder.iterdir()
+                                        if elem.is_file() and (elem.suffix.lower() in supported_image_files or
+                                                               elem.suffix.lower() in supported_video_files)
+            ],
+            key=lambda elem: elem.name
+        )
 
-        if len(self.dummy_images) > 0:
-            print(f"Loaded {len(self.dummy_images)} dummy images")
+        print(f"Loading images and videos from {dummy_cam_data_folder} as dummy camera output ...")
+        for file in dummy_files:
+            if file.suffix.lower() in supported_image_files:
+                # load image file
+                image = cv2.imread(file, cv2.IMREAD_COLOR)
+                self._dummy_images.append(cv2.resize(image, self.settings.color_image_size))
+            else:
+                # load video file
+                self._video_player = VideoPlayer(file, self.settings.fps)
+                for _ in range(self._video_player.get_num_frames()):
+                    video_frame = self._video_player.get_next_frame()
+                    self._dummy_images.append(ImageUtils.rescale(video_frame, self.settings.color_image_size))
+                self._video_player.close()
+                self._video_player = None
+
+        # check
+        if len(self._dummy_images) > 0:
+            print(f"Loaded {len(self._dummy_images)} dummy images")
         else:
-            raise FileNotFoundError("Failed to load the dummy images!")
+            raise FileNotFoundError("Failed to load the dummy image and/or video data!")
 
     def get_frame(self, frame_type: Frame.FrameType = Frame.FrameType.COLOR) -> Frame:
-        idx_return = self.counter
-        self.counter = (self.counter + 1) % len(self.dummy_images)
-        self.simulated_time += 1.0 / self.settings.fps
+
+        next_index = (self._current_index + 1) % len(self._dummy_images)
+        next_time = self.simulated_time + 1.0 / self.settings.fps
 
         if frame_type == Frame.FrameType.COLOR:
 
-            return Frame(self.dummy_images[idx_return], frame_type, self.settings.color_image_size,
+            if len(self._color_queue) == 0:
+                self._current_index = next_index
+                self.simulated_time = next_time
+                self._buffer_images(self._current_index)
+
+            dummy_image = self._color_queue.popleft()
+
+            frame = Frame(dummy_image, frame_type, self.settings.color_image_size,
                          timestamp_override=self.simulated_time)
 
         elif frame_type == Frame.FrameType.LORES:
 
-            lores_img = cv2.resize(self.dummy_images[idx_return], self.settings.lores_image_size)
-            return Frame(cv2.cvtColor(lores_img, cv2.COLOR_BGR2YUV_I420), frame_type, self.settings.lores_image_size,
+            if len(self._lores_queue) == 0:
+                self._current_index = next_index
+                self.simulated_time = next_time
+                self._buffer_images(self._current_index)
+
+            dummy_image = self._lores_queue.popleft()
+
+            lores_img = cv2.resize(dummy_image, self.settings.lores_image_size)
+            frame = Frame(cv2.cvtColor(lores_img, cv2.COLOR_BGR2YUV_I420), frame_type, self.settings.lores_image_size,
                          timestamp_override=self.simulated_time)
 
         else:
             raise NotImplementedError("Frame type not yet implemented.")
+
+        return frame
+
+    def get_dummy_video_info(self):
+        return self._current_index, len(self._dummy_images)
